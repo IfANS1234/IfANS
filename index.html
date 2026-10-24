@@ -32,6 +32,10 @@
 
 *{box-sizing:border-box; margin:0; padding:0;}
 html{scroll-behavior:smooth;}
+@media (pointer:coarse){
+  html{ scroll-behavior:auto; }
+  body{ touch-action:pan-y; }
+}
 
 body{
   background:var(--bg);
@@ -2224,6 +2228,8 @@ window.addEventListener('load', function(){
   const coarse = window.matchMedia('(pointer: coarse)').matches;
   const narrow = window.innerWidth < 720;
   const depthScale = (coarse || narrow) ? 0 : 1; // parallax disabled on touch/narrow // lighten on touch/mobile for perf + comfort
+
+  if(coarse || narrow) return; // skip entire parallax loop on mobile — avoids DOM thrashing and scroll interference
 
   let ticking = false;
 
