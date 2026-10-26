@@ -2134,11 +2134,9 @@ window.addEventListener('load', function(){
     intro.classList.add('out');
     setTimeout(() => intro.classList.add('gone'), 850);
     if(withSound){
-      // Give audio controller a moment to initialise, then trigger toggle
-      setTimeout(() => {
-        const muteBtn = document.getElementById('muteToggle');
-        if(muteBtn) muteBtn.click();
-      }, 100);
+      // Set a flag the audio controller reads on next RAF tick
+      // Avoids timing race with programmatic .click() on the mute button
+      window._ifansSoundOnRequest = true;
     }
   }
 
@@ -2331,6 +2329,12 @@ window.addEventListener('load', function(){
 
   let _audioFrame = 0;
   function audioLoop(){
+    // Pick up sound-on request from the intro overlay dismiss
+    if(window._ifansSoundOnRequest){
+      window._ifansSoundOnRequest = false;
+      soundOn = true;
+      refreshButtonUI();
+    }
     // Throttle to every 3rd frame on mobile to reduce layout thrash
     const isMobile = window.matchMedia('(pointer:coarse)').matches;
     _audioFrame++;
