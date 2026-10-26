@@ -1410,7 +1410,7 @@ section{
   </section>
 
   <section class="track" data-section="track" data-track="10" >
-    <video class="bg-video bg-video--track" src="assets/track-09-now-you-are-gone.mp4" autoplay muted loop playsinline data-depth="0.38"></video>
+    <video class="bg-video bg-video--track" src="assets/track-09-now-you-are-gone.mp4" muted loop playsinline data-depth="0.38"></video>
     <img class="triangle-bleed triangle-bleed--track9" src="assets/triangle.png" alt="" aria-hidden="true" data-depth="0.42">
     <div class="veil"></div>
     <div class="track-inner">
@@ -2125,31 +2125,38 @@ const COUNT = (window.matchMedia("(pointer:coarse)").matches || window.innerWidt
 })();
 
 
-/* sound intro overlay — runs after full page load so audio controller is ready */
-window.addEventListener('load', function(){
-  const intro = document.getElementById('soundIntro');
-  if(!intro) return;
+/* sound intro overlay — attached immediately on DOMContentLoaded, NOT window.load
+   window.load waits for all videos/images and fires very late on slow connections */
+(function(){
+  function initOverlay(){
+    const intro = document.getElementById('soundIntro');
+    if(!intro) return;
 
-  function dismiss(withSound){
-    intro.classList.add('out');
-    setTimeout(() => intro.classList.add('gone'), 850);
-    if(withSound){
-      // Set a flag the audio controller reads on next RAF tick
-      // Avoids timing race with programmatic .click() on the mute button
-      window._ifansSoundOnRequest = true;
+    function dismiss(withSound){
+      intro.classList.add('out');
+      setTimeout(() => intro.classList.add('gone'), 850);
+      if(withSound){
+        window._ifansSoundOnRequest = true;
+      }
     }
+
+    const btnOn  = document.getElementById('siBtnOn');
+    const btnSkip= document.getElementById('siBtnSkip');
+    if(btnOn)   btnOn.addEventListener('click',  function(){ dismiss(true);  });
+    if(btnSkip) btnSkip.addEventListener('click', function(){ dismiss(false); });
+
+    // Auto-dismiss after 10s if neither button clicked
+    setTimeout(function(){
+      if(!intro.classList.contains('out')) dismiss(false);
+    }, 10000);
   }
 
-  const btnOn  = document.getElementById('siBtnOn');
-  const btnSkip= document.getElementById('siBtnSkip');
-  if(btnOn)   btnOn.addEventListener('click',  function(){ dismiss(true);  });
-  if(btnSkip) btnSkip.addEventListener('click', function(){ dismiss(false); });
-
-  // Auto-dismiss after 7s if neither button clicked
-  setTimeout(function(){
-    if(!intro.classList.contains('out')) dismiss(false);
-  }, 7000);
-});
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initOverlay);
+  } else {
+    initOverlay();
+  }
+})();
 
 
 /* outro colour carousel */
@@ -2316,8 +2323,8 @@ window.addEventListener('load', function(){
     const mid  = vh * 0.5;
     const elMid = rect.top + rect.height * 0.5;
     const dist  = Math.abs(elMid - mid);
-    const flat  = vh * 0.12;   // full volume within this distance from centre
-    const fade  = vh * 0.55;   // zero volume beyond this distance
+    const flat  = vh * 0.10;   // full volume within this distance from centre
+    const fade  = vh * 0.42;   // zero volume beyond — tighter so only one track audible at a time
     if(dist <= flat) return 1;
     if(dist >= fade) return 0;
     return 1 - (dist - flat) / (fade - flat);
@@ -2395,7 +2402,7 @@ window.addEventListener('load', function(){
       if(entry.isIntersecting){ safePlay(v); }
       else { safePause(v); }
     });
-  }, { threshold: [0, 0.05, 1] });
+  }, { threshold: 0.1 }); // only play when 10%+ visible — avoids ghost-playing adjacent tracks
   allVideos.forEach(v => io.observe(v));
 
   /* ---- looping via ended event ---- */
