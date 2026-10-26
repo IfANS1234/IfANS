@@ -1200,7 +1200,7 @@ section{
 
   <!-- HERO -->
   <section id="hero" data-section="hero">
-    <audio id="heroPreview" src="assets/hero-theme.mp3" loop preload="none"></audio>
+    <audio id="heroPreview" src="assets/hero-theme.mp3" loop preload="auto"></audio>
     <video class="bg-video" data-depth="0.13" muted loop playsinline poster="assets/wave-cover.jpg">
       <source src="assets/logo-loop.mp4" type="video/mp4">
     </video>
@@ -2329,7 +2329,12 @@ window.addEventListener('load', function(){
   // Lightbox audio fader — 1=normal, 0=silent during YouTube playback
   window._lbFader = window._lbFader !== undefined ? window._lbFader : 1;
 
+  let _audioFrame = 0;
   function audioLoop(){
+    // Throttle to every 3rd frame on mobile to reduce layout thrash
+    const isMobile = window.matchMedia('(pointer:coarse)').matches;
+    _audioFrame++;
+    if(isMobile && _audioFrame % 3 !== 0){ requestAnimationFrame(audioLoop); return; }
     // Track videos
     trackVideos.forEach(v => {
       const section = v.closest('section');
@@ -2344,20 +2349,19 @@ window.addEventListener('load', function(){
       }
     });
 
-    // Hero MP3 (The Falling Wave) — ambient only ABOVE the first track section
-    // or AFTER the outro section (not Radio/Live/Merch). Never between tracks.
+    // Hero MP3 (The Falling Wave) — plays ABOVE the first track and AFTER the last track
     if(heroAudio){
       const vh = window.innerHeight;
       const firstTrack = document.querySelector('section[data-track="1"]');
-      const outroSection = document.getElementById('outro');
+      const lastTrack  = document.querySelector('section[data-track="11"]');
       let ambientVol = 0;
-      if(soundOn && firstTrack && outroSection){
+      if(soundOn && firstTrack && lastTrack){
         const ftRect = firstTrack.getBoundingClientRect();
-        const otRect = outroSection.getBoundingClientRect();
-        // Above track zone: fade in as first track scrolls up away from viewport
+        const ltRect = lastTrack.getBoundingClientRect();
+        // Above track zone: fade in as first track scrolls away upward
         const aboveAmt = Math.min(1, Math.max(0, (ftRect.top - vh * 0.55) / (vh * 0.25)));
-        // After track zone: fade in only once the outro section is well into view
-        const afterAmt = Math.min(1, Math.max(0, (vh * 0.45 - otRect.top) / (vh * 0.25)));
+        // After track zone: fade in as last track leaves viewport upward
+        const afterAmt = Math.min(1, Math.max(0, (vh * 0.55 - ltRect.bottom) / (vh * 0.3)));
         ambientVol = Math.max(aboveAmt, afterAmt) * window._lbFader;
       }
       if(ambientVol > 0.01){
