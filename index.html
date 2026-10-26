@@ -35,6 +35,10 @@ html{scroll-behavior:smooth;}
 @media (pointer:coarse){
   html{ scroll-behavior:auto; }
   body{ touch-action:pan-y; }
+  /* mix-blend-mode:difference on fixed elements causes compositing jank on iOS */
+  .corner, .progress-rail, .scroll-cue, .links-corner, .mute-toggle, .sc-note, .follow-pin {
+    mix-blend-mode: normal;
+  }
 }
 
 body{
@@ -1405,7 +1409,7 @@ section{
     </div>
   </section>
 
-  <section class="track" data-section="track" data-track="10">
+  <section class="track" data-section="track" data-track="10" >
     <video class="bg-video bg-video--track" src="assets/track-09-now-you-are-gone.mp4" autoplay muted loop playsinline data-depth="0.38"></video>
     <img class="triangle-bleed triangle-bleed--track9" src="assets/triangle.png" alt="" aria-hidden="true" data-depth="0.42">
     <div class="veil"></div>
@@ -1416,9 +1420,9 @@ section{
   
     </div>
     <div class="track-actions">
-      <button class="ta-btn ta-btn--off" >ABOUT</button>
+      <button class="ta-btn" data-yt-about="MgX6X9tSt38">ABOUT</button>
       <div class="ta-sep"></div>
-      <button class="ta-btn ta-btn--off"  aria-label="Watch full visualiser">WATCH</button>
+      <button class="ta-btn ta-btn--off" aria-label="Watch full visualiser">WATCH</button>
       <div class="ta-sep"></div>
       <a class="ta-btn" href="https://open.spotify.com/track/1OZxnSuyPmeoZap7Wa8A8k" target="_blank" rel="noopener">LISTEN</a>
     </div>
@@ -2341,19 +2345,19 @@ window.addEventListener('load', function(){
     });
 
     // Hero MP3 (The Falling Wave) — ambient only ABOVE the first track section
-    // or AFTER the last track section. Never between tracks. Picks up where left off.
+    // or AFTER the outro section (not Radio/Live/Merch). Never between tracks.
     if(heroAudio){
       const vh = window.innerHeight;
       const firstTrack = document.querySelector('section[data-track="1"]');
-      const lastTrack  = document.querySelector('section[data-track="11"]');
+      const outroSection = document.getElementById('outro');
       let ambientVol = 0;
-      if(soundOn && firstTrack && lastTrack){
+      if(soundOn && firstTrack && outroSection){
         const ftRect = firstTrack.getBoundingClientRect();
-        const ltRect = lastTrack.getBoundingClientRect();
+        const otRect = outroSection.getBoundingClientRect();
         // Above track zone: fade in as first track scrolls up away from viewport
         const aboveAmt = Math.min(1, Math.max(0, (ftRect.top - vh * 0.55) / (vh * 0.25)));
-        // After track zone: fade in as last track scrolls up above viewport centre
-        const afterAmt = Math.min(1, Math.max(0, (vh * 0.45 - ltRect.bottom) / (vh * 0.25)));
+        // After track zone: fade in only once the outro section is well into view
+        const afterAmt = Math.min(1, Math.max(0, (vh * 0.45 - otRect.top) / (vh * 0.25)));
         ambientVol = Math.max(aboveAmt, afterAmt) * window._lbFader;
       }
       if(ambientVol > 0.01){
