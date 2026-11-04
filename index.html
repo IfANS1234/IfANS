@@ -2619,8 +2619,6 @@ const COUNT = (window.matchMedia("(pointer:coarse)").matches || window.innerWidt
       const duck = dist <= fadeEnd ? 0
                  : dist >= fadeStart ? 1
                  : (dist - fadeEnd) / (fadeStart - fadeEnd);
-      window._lbFader = Math.min(window._lbFader !== undefined ? window._lbFader : 1, duck < 0.15 ? duck : window._lbFader);
-      // simpler: set a dedicated radio duck multiplier
       window._radioDuck = duck;
     }
     window.addEventListener('scroll', checkRadioDuck, {passive:true});
