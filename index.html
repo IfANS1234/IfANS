@@ -2603,23 +2603,22 @@ const COUNT = (window.matchMedia("(pointer:coarse)").matches || window.innerWidt
     }, 5000);
   })();
 
-  // ---- Radio section: duck backing music based on how much viewport it fills ----
+  // ---- Radio section: duck backing music while in view ----
   (function(){
     const radioSection = document.getElementById('radio');
     if(!radioSection) return;
     window._radioDuck = 1;
     function checkRadioDuck(){
-      const rect = radioSection.getBoundingClientRect();
-      const vh   = window.innerHeight;
-      // Fade out as section enters from bottom (rect.top: vh→vh*0.5)
-      const enterDuck = rect.top >= vh       ? 1
-                      : rect.top <= vh * 0.5 ? 0
-                      : (rect.top - vh * 0.5) / (vh * 0.5);
-      // Fade back in as section exits from top (rect.bottom: vh*0.5→0)
-      const exitDuck  = rect.bottom >= vh * 0.5 ? 0
-                      : rect.bottom <= 0        ? 1
-                      : 1 - rect.bottom / (vh * 0.5);
-      window._radioDuck = Math.max(enterDuck, exitDuck);
+      const rect   = radioSection.getBoundingClientRect();
+      const vh     = window.innerHeight;
+      const margin = vh * 0.4;
+      // entryFade: 0 = section hasn't appeared yet, 1 = section top well into view
+      const entryFade = Math.max(0, Math.min(1, (vh - rect.top) / margin));
+      // exitFade: 1 = section bottom still visible, 0 = section gone above
+      const exitFade  = Math.max(0, Math.min(1, rect.bottom / margin));
+      // inView = 1 while section is on screen, 0 when off
+      const inView = Math.min(entryFade, exitFade);
+      window._radioDuck = 1 - inView;
     }
     window.addEventListener('scroll', checkRadioDuck, {passive:true});
     checkRadioDuck();
