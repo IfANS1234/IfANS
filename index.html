@@ -2603,22 +2603,21 @@ const COUNT = (window.matchMedia("(pointer:coarse)").matches || window.innerWidt
     }, 5000);
   })();
 
-  // ---- Radio section: duck backing music while visible ----
+  // ---- Radio section: duck backing music based on how much viewport it fills ----
   (function(){
     const radioSection = document.getElementById('radio');
     if(!radioSection) return;
+    window._radioDuck = 1;
     function checkRadioDuck(){
-      const rect = radioSection.getBoundingClientRect();
-      const vh   = window.innerHeight;
-      const mid  = vh * 0.5;
-      const elMid = rect.top + rect.height * 0.5;
-      const dist  = Math.abs(elMid - mid);
-      const fadeStart = vh * 0.55;
-      const fadeEnd   = vh * 0.15;
-      // 0 = fully ducked, 1 = full volume
-      const duck = dist <= fadeEnd ? 0
-                 : dist >= fadeStart ? 1
-                 : (dist - fadeEnd) / (fadeStart - fadeEnd);
+      const rect    = radioSection.getBoundingClientRect();
+      const vh      = window.innerHeight;
+      const visTop  = Math.max(0, rect.top);
+      const visBtm  = Math.min(vh, rect.bottom);
+      const visFrac = Math.max(0, visBtm - visTop) / vh;
+      // Start ducking at 15% visible, fully silent at 45%
+      const duck = visFrac <= 0.15 ? 1
+                 : visFrac >= 0.45 ? 0
+                 : 1 - (visFrac - 0.15) / 0.30;
       window._radioDuck = duck;
     }
     window.addEventListener('scroll', checkRadioDuck, {passive:true});
