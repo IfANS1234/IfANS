@@ -1096,13 +1096,16 @@ section{
 /* ---- hero veil — slightly heavier than track sections so text reads well ---- */
 .veil--hero{ background:rgba(0,0,0,0.52); }
 
-/* ---- hero logo ---- */
-.hero-logo{
-  width:clamp(64px, 9vw, 110px);
+/* ---- hero crossfade backgrounds ---- */
+.hero-bg-loop{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; pointer-events:none;
   opacity:0;
-  margin-bottom:20px;
-  filter:brightness(0) invert(1);
-  animation:heroIn2 0.8s 0.6s cubic-bezier(.16,1,.3,1) forwards;
+  transition:opacity 1.8s ease;
+}
+/* On mobile: just show gatefold, skip the video */
+@media(pointer:coarse){
+  .hero-bg-loop{ display:none; }
 }
 
 /* ---- ORDER VINYL — prominent CTA ---- */
@@ -1114,6 +1117,7 @@ section{
   font-size:11px; letter-spacing:0.22em; text-transform:uppercase;
   font-weight:700;
   padding:14px 36px;
+  margin-top:36px;
   text-decoration:none;
   transition:opacity .2s ease, transform .2s ease;
   opacity:0;
@@ -1235,10 +1239,12 @@ section{
   <!-- HERO -->
   <section id="hero" data-section="hero">
     <audio id="heroPreview" src="assets/hero-theme.mp3" loop preload="auto"></audio>
-    <img class="bg-img hero-gatefold" src="assets/gatefold.jpg" alt="The Falling Wave — gatefold album artwork" data-depth="0.13">
+    <img class="bg-img hero-gatefold" id="heroBgGatefold" src="assets/gatefold.jpg" alt="The Falling Wave — gatefold album artwork" data-depth="0.13">
+    <video class="bg-video hero-bg-loop" id="heroBgLoop" data-depth="0.13" muted loop playsinline>
+      <source src="assets/logo-loop.mp4" type="video/mp4">
+    </video>
     <div class="veil veil--hero"></div>
     <div class="hero-inner">
-      <img class="hero-logo" src="assets/logo.png" alt="IfANS">
       <div class="display album-line">THE fALLING <span class="fade">WAVE.</span></div>
       <div class="sub-line"><a href="https://ifans.bandcamp.com/album/the-falling-wave" target="_blank" rel="noopener" class="sub-link">DEBUT ALBUM</a> · OUT NOW · <a href="https://www.jacksaidwhat.co.uk/out-yer-box/" target="_blank" rel="noopener" class="sub-link">OUT YER BOX RECORDS</a></div>
       <a class="hero-vinyl-btn" href="https://ifans.bandcamp.com/album/the-falling-wave" target="_blank" rel="noopener">ORDER LIMITED VINYL</a>
@@ -2383,7 +2389,8 @@ const COUNT = (window.matchMedia("(pointer:coarse)").matches || window.innerWidt
     trackVideos.forEach(v => {
       const section = v.closest('section');
       if(!section) return;
-      const vol = soundOn ? centreVolume(section) : 0;
+      const radioDuck = (window._radioDuck !== undefined) ? window._radioDuck : 1;
+      const vol = soundOn ? centreVolume(section) * radioDuck : 0;
       if(vol > 0){
         v.muted = false;
         v.volume = Math.min(1, vol) * window._lbFader;
@@ -2406,7 +2413,8 @@ const COUNT = (window.matchMedia("(pointer:coarse)").matches || window.innerWidt
         const aboveAmt = Math.min(1, Math.max(0, (ftRect.top - vh * 0.55) / (vh * 0.25)));
         // After track zone: fade in as last track leaves viewport upward
         const afterAmt = Math.min(1, Math.max(0, (vh * 0.55 - ltRect.bottom) / (vh * 0.3)));
-        ambientVol = Math.max(aboveAmt, afterAmt) * window._lbFader;
+        const radioDuck = (window._radioDuck !== undefined) ? window._radioDuck : 1;
+        ambientVol = Math.max(aboveAmt, afterAmt) * window._lbFader * radioDuck;
       }
       if(ambientVol > 0.01){
         heroAudio.muted = false;
@@ -2579,7 +2587,46 @@ const COUNT = (window.matchMedia("(pointer:coarse)").matches || window.innerWidt
   document.querySelectorAll('.live-watch-btn[data-yt-live]').forEach(btn => {
     btn.addEventListener('click', () => openLightbox(btn.dataset.ytLive));
   });
-  // Artist Intro button on hero
+  // ---- Hero background crossfade (desktop only) ----
+  (function(){
+    const coarse = window.matchMedia('(pointer:coarse)').matches;
+    if(coarse) return; // mobile: static gatefold only
+    const gatefold = document.getElementById('heroBgGatefold');
+    const loop     = document.getElementById('heroBgLoop');
+    if(!gatefold || !loop) return;
+    loop.play().catch(()=>{});
+    let showingLoop = false;
+    setInterval(function(){
+      showingLoop = !showingLoop;
+      loop.style.opacity     = showingLoop ? '1' : '0';
+      gatefold.style.opacity = showingLoop ? '0' : '1';
+    }, 5000);
+  })();
+
+  // ---- Radio section: duck backing music while visible ----
+  (function(){
+    const radioSection = document.getElementById('radio');
+    if(!radioSection) return;
+    function checkRadioDuck(){
+      const rect = radioSection.getBoundingClientRect();
+      const vh   = window.innerHeight;
+      const mid  = vh * 0.5;
+      const elMid = rect.top + rect.height * 0.5;
+      const dist  = Math.abs(elMid - mid);
+      const fadeStart = vh * 0.55;
+      const fadeEnd   = vh * 0.15;
+      // 0 = fully ducked, 1 = full volume
+      const duck = dist <= fadeEnd ? 0
+                 : dist >= fadeStart ? 1
+                 : (dist - fadeEnd) / (fadeStart - fadeEnd);
+      window._lbFader = Math.min(window._lbFader !== undefined ? window._lbFader : 1, duck < 0.15 ? duck : window._lbFader);
+      // simpler: set a dedicated radio duck multiplier
+      window._radioDuck = duck;
+    }
+    window.addEventListener('scroll', checkRadioDuck, {passive:true});
+    checkRadioDuck();
+  })();
+
   // External trigger — hero quote click and pub play btn
   document.addEventListener('openLightboxExt', (e) => openLightbox(e.detail));
   document.querySelectorAll('.pub-play-btn[data-yt]').forEach(btn => {
