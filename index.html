@@ -2609,16 +2609,17 @@ const COUNT = (window.matchMedia("(pointer:coarse)").matches || window.innerWidt
     if(!radioSection) return;
     window._radioDuck = 1;
     function checkRadioDuck(){
-      const rect    = radioSection.getBoundingClientRect();
-      const vh      = window.innerHeight;
-      const visTop  = Math.max(0, rect.top);
-      const visBtm  = Math.min(vh, rect.bottom);
-      const visFrac = Math.max(0, visBtm - visTop) / vh;
-      // Start ducking at 15% visible, fully silent at 45%
-      const duck = visFrac <= 0.15 ? 1
-                 : visFrac >= 0.45 ? 0
-                 : 1 - (visFrac - 0.15) / 0.30;
-      window._radioDuck = duck;
+      const rect = radioSection.getBoundingClientRect();
+      const vh   = window.innerHeight;
+      // Fade out as section enters from bottom (rect.top: vh→vh*0.5)
+      const enterDuck = rect.top >= vh       ? 1
+                      : rect.top <= vh * 0.5 ? 0
+                      : (rect.top - vh * 0.5) / (vh * 0.5);
+      // Fade back in as section exits from top (rect.bottom: vh*0.5→0)
+      const exitDuck  = rect.bottom >= vh * 0.5 ? 0
+                      : rect.bottom <= 0        ? 1
+                      : 1 - rect.bottom / (vh * 0.5);
+      window._radioDuck = Math.max(enterDuck, exitDuck);
     }
     window.addEventListener('scroll', checkRadioDuck, {passive:true});
     checkRadioDuck();
